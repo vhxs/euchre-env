@@ -8,3 +8,5 @@ Let's get the game written first, and maybe put a front end on it.
 This looks very pertinent: https://web.stanford.edu/class/aa228/reports/2020/final165.pdf
 
 *The American Hoyle; or, Gentleman's hand-book of games* on Library of Congress, apparently considered the holy grail of Euchre strategy: [link](https://www.loc.gov/resource/dcmsiabooks.americanhoyleorg00dick_0/?sp=2&st=gallery)
+
+Someone made a JavaScript library to render cards (though it looks like it may not be maintained anymore): https://github.com/richardschneider/cardsJS
