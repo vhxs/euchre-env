@@ -8,6 +8,8 @@ class Suits:
     values_ids = {val: i for i, val in enumerate(values_repr)}
     # 2 = 'J' is special
 
+    
+
 class Card:
     def __init__(self, suit, value):
         self.suit = suit
@@ -36,7 +38,11 @@ class Player:
         print("Hand: " + " ".join([str(card) for card in self.hand]))
 
     def swap_card(self, new_card):
+        # first pick up new card
+        self.hand.append(new_card)
+        # then discard
         while True:
+            self.print_hand()
             old_card_str = input("Which to discard?: ")
             try:
                 suit = Suits.suits_ids[old_card_str[-1]]
@@ -49,9 +55,11 @@ class Player:
                 print(f"Card {old_card_str} not in hand!")
             else:
                 self.hand.remove(old_card)
-                self.hand.append(new_card)
                 self.print_hand()
                 return
+
+    def suits_in_hand(self):
+        return [card.suit for card in self.hand]
     
 class Deck:
     def __init__(self):
@@ -59,11 +67,12 @@ class Deck:
         self.reset()
 
     def reset(self):
+        # populate deck
         self.cards.clear()
         for suit in range(4):
             for value in range(6):
                 self.cards.append(Card(suit, value))
-        # shuffle
+        # shuffle it
         random.shuffle(self.cards)
 
     def deal(self, player):
@@ -83,46 +92,144 @@ class Euchre:
         self.score1 = 0
         self.score2 = 0
         self.deck = Deck()
-        self.dealer = random.randint(0, 4)
+        self.dealer = random.randint(0, 3)
         self.stick_the_dealer = stick_the_dealer
         self.players = [Player(p) for p in range(4)]
 
-        self.play()
+        # exit gracefully
+        try:
+            self.play()
+        except KeyboardInterrupt:
+            exit(0)
 
     def play(self):
         while not self.finished():
             winner, score = self.play_round()
-            if winner == "1":
+            if winner == 0:
                 self.score1 += score
             else:
                 self.score2 += score
 
             self.dealer = (self.dealer + 1) % 4
+            self.play_round()
 
         self.announce_winner()
 
+    def reset(self):
+        for player in self.players:
+            player.hand.clear()
+
     def play_round(self):
+        # deal to everyone
+        self.reset()
         self.deck.reset()
         for player in self.players:
             self.deck.deal(player)
 
-        return "1", 10
+        # pick a suit
+        success, caller, alone, suit = self.bidding_round_one()
+        if not success:
+            success, caller, alone, suit = self.bidding_round_two(suit)
+            if not success:
+                # should not happen in stick the dealer
+                assert not self.stick_the_dealer
+                print("Throw it in!")
+                self.throw_in()
+                self.play_round()
+        else:
+            trump = suit
+        
+        # play 5 tricks
+        tricks1 = 0
+        tricks2 = 0
+        for _ in range(5):
+            winner = self.play_trick(trump, alone)
+            if winner % 2 == 0:
+                tricks1 += 1
+            else:
+                tricks2 += 1
+        
+        # determine scoring, based on caller, alone, outcome
+        # TODO calculate score
+
+        return 0, 10
+
+    def compute_winner_score(self, did_call, tricks, alone):
+        if did_call:
+            if tricks == 5:
+                if not alone:
+                    # called it and got all tricks, with partner
+                    return 2
+                else:
+                    # got all of them alone
+                    return 4
+            else:
+                # didn't get them all, alone or otherwise
+                return 1
+        else:
+            # this is a euchre
+            return 2
+
+    def play_trick(self, trump, alone):
+        # one play from each player, starting from the person after the dealer
+        # skip partner for alone
+        # TODO implement this
+        return 0
 
     def bidding_round_one(self):
         maybe_trump_card = self.deck.take_top()
         player_number = (self.dealer + 1) % 4
         for _ in range(4):
             self.players[player_number].print_hand()
-            take_card = input(f"Top card: {str(maybe_trump_card)}. Pick up? (y/n) ")
-            if take_card.lower() == 'y':
-                self.players[player_number].swap_card(maybe_trump_card)
-                return True
+            take_card = input(f"Top card: {str(maybe_trump_card)}. Have dealer pick up? (y/a/n) ")
+            if (choice := take_card.lower()) in ['y', 'a']:
+                self.players[self.dealer].swap_card(maybe_trump_card)
+                alone = (choice == 'a')
+                return True, player_number, alone, maybe_trump_card.suit
             player_number = (player_number + 1) % 4
         self.deck.append(maybe_trump_card)
-        return False
+        return False, -1, False, maybe_trump_card.suit
 
-    def bidding_round_two(self):
-        pass
+    def choose_suit(self, player, forbidden_suit, force_choice):
+        possible_suits = [suit for suit in player.suits_in_hand() if not forbidden_suit]
+        possible_suits_str = " ".join([Suits.suits_repr[suit] for suit in possible_suits])
+        if not force_choice:
+            prompt = f"Choose suit among {possible_suits_str} or pass (p): "
+        else:
+            prompt = f"Choose suit among {possible_suits_str}: "
+        while True:
+            choice_str = input(prompt)
+            # pass (if allowed)
+            if choice_str.lower() == 'p' and not force_choice:
+                return False, -1, False
+            # otherwise choose trump
+            try:
+                choice = Suits.suits_ids[choice_str]
+            except (IndexError, KeyError):
+                print(f"Invalid choice {choice_str}")
+            if choice not in possible_suits:
+                print(f"Invalid choice {choice_str}")
+            else:
+                # don't forget to ask whether alone or not
+                alone_choice = input("Alone? (y/n): ")
+                if alone_choice.lower() == 'y':
+                    alone = True
+                else:
+                    alone = False
+                return True, choice, alone
+
+    def bidding_round_two(self, forbidden_suit):
+        player_number = (self.dealer + 1) % 4
+        for i in range(4):
+            player = self.players[player_number]
+            force_choice = (i == 3) and self.stick_the_dealer
+            player.print_hand()
+            yes, choice, alone = self.choose_suit(player, forbidden_suit, force_choice)
+            if yes:
+                return True, player_number, alone, choice
+            player_number = (player_number + 1) % 4
+        # this can't happen in stick the dealer
+        return False, -1, False, -1
         
     def finished(self):
         if self.score1 >= 10 or self.score2 >= 10:
