@@ -8,8 +8,6 @@ class Suits:
     values_ids = {val: i for i, val in enumerate(values_repr)}
     # 2 = 'J' is special
 
-    
-
 class Card:
     def __init__(self, suit, value):
         self.suit = suit
@@ -187,11 +185,21 @@ class Euchre:
                 alone = (choice == 'a')
                 return True, player_number, alone, maybe_trump_card.suit
             player_number = (player_number + 1) % 4
-        self.deck.append(maybe_trump_card)
+        self.deck.add(maybe_trump_card)
         return False, -1, False, maybe_trump_card.suit
 
     def choose_suit(self, player, forbidden_suit, force_choice):
-        possible_suits = [suit for suit in player.suits_in_hand() if not forbidden_suit]
+        possible_suits = [suit for suit in player.suits_in_hand() if suit != forbidden_suit]
+        # check edge case
+        if not possible_suits and force_choice:
+            print(f"Forced to choose {Suits.suits_repr[forbidden_suit]}.")
+            alone_choice = input("Alone? (y/n): ")
+            if alone_choice.lower() == 'y':
+                alone = True
+            else:
+                alone = False
+            return True, forbidden_suit, alone
+
         possible_suits_str = " ".join([Suits.suits_repr[suit] for suit in possible_suits])
         if not force_choice:
             prompt = f"Choose suit among {possible_suits_str} or pass (p): "
