@@ -5,7 +5,7 @@ How would a reinforcement learning agent do at learning this game? From experien
 
 Let's get the game written first, and maybe put a front end on it.
 
-This looks very pertinent: https://web.stanford.edu/class/aa228/reports/2020/final165.pdf
+This looks relevant: https://web.stanford.edu/class/aa228/reports/2020/final165.pdf
 
 *The American Hoyle; or, Gentleman's hand-book of games* on Library of Congress, apparently considered the holy grail of Euchre strategy: [link](https://www.loc.gov/resource/dcmsiabooks.americanhoyleorg00dick_0/?sp=2&st=pdf&pdfPage=1). The guy named Hoyle predates the existence of Euchre though.
 
