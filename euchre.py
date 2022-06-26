@@ -6,20 +6,57 @@ class Suits:
     values_repr = ['9', '10', 'J', 'Q', 'K', 'A']
     suits_ids = {y: x for x, y in suits_repr.items()}
     values_ids = {val: i for i, val in enumerate(values_repr)}
-    # 2 = 'J' is special
+
+    suits_complement = {HEART: DIAMOND, DIAMOND: HEART, SPADE: CLUB, CLUB: SPADE}
+
+    def order(lead_suit, trump_suit):
+        # there are 24 cards in a euchre deck
+        radix = 24
+        coef = 1
+        scores = {}
+
+        # not trump, not lead suit
+        for suit in [s for s in range(4) if s not in [lead_suit, trump_suit]]:
+            for value in range(6):
+                scores[Card(suit, value)] = 0
+
+        # leading suit
+        coef *= radix
+        for value in range(6):
+            scores[Card[lead_suit, value]] = coef + value
+
+        # trump suit
+        coef *= radix
+        for value in range(6):
+            scores[Card[trump_suit, value]] = coef + value
+
+        # left bower
+        
+
+    def choose_winner(plays):
+        pass
 
 class Card:
     def __init__(self, suit, value):
+        # "real" suit is only for printing/parsing
+        self.real_suit = suit
         self.suit = suit
         self.value = value
 
     def __str__(self):
-        suits_repr = Suits.suits_repr[self.suit]
+        suits_repr = Suits.suits_repr[self.real_suit]
         values_repr = Suits.values_repr[self.value]
         return f"{values_repr}{suits_repr}"
 
     def __eq__(self, other):
         return (self.suit == other.suit) and (self.value == other.value)
+
+    def make_trump(self, trump_suit):
+        # should only be called on a Jack
+        if self.value != Suits.values_ids['J']:
+            raise ValueError("Trying to make non-Jack a trump card!")
+        
+        self.suit = trump_suit
 
 class Player:
     def __init__(self, idx):
@@ -35,29 +72,53 @@ class Player:
     def print_hand(self):
         print("Hand: " + " ".join([str(card) for card in self.hand]))
 
+    def choose_card(self, prompt, lead_suit=None):
+        while True:
+            self.print_hand()
+            card_str = input(prompt)
+
+            # parse input
+            try:
+                suit = Suits.suits_ids[card_str[-1]]
+                value = Suits.values_ids[card_str[:-1]]
+            except (IndexError, KeyError):
+                print(f"Invalid card {card_str}!")
+                continue
+
+            # valid card, but not in hand
+            card = Card(suit, value)
+            if card not in self.hand:
+                print(f"Card {card_str} not in hand!")
+                continue
+
+            # doesn't match lead suit
+            if lead_suit is not None and self.has_suit(lead_suit):
+                print(f"Must follow suit!")
+                continue
+
+            break
+        return card
+
     def swap_card(self, new_card):
         # first pick up new card
         self.hand.append(new_card)
+
         # then discard
-        while True:
-            self.print_hand()
-            old_card_str = input("Which to discard?: ")
-            try:
-                suit = Suits.suits_ids[old_card_str[-1]]
-                value = Suits.values_ids[old_card_str[:-1]]
-            except (IndexError, KeyError):
-                print(f"Card {old_card_str} not in hand!")
-                continue
-            old_card = Card(suit, value)
-            if old_card not in self.hand:
-                print(f"Card {old_card_str} not in hand!")
-            else:
-                self.hand.remove(old_card)
-                self.print_hand()
-                return
+        old_card = self.choose_card("Which to discard? ")
+        self.hand.remove(old_card)
+        self.print_hand()
 
     def suits_in_hand(self):
         return [card.suit for card in self.hand]
+
+    def has_suit(self, suit):
+        return suit in self.suits_in_hand()
+
+    def play_card(self, lead_suit):
+        # choose card and remove from hand
+        card = self.choose_card("Which card to play? ", lead_suit)
+        self.hand.remove(card)
+        return card
     
 class Deck:
     def __init__(self):
@@ -96,11 +157,11 @@ class Euchre:
 
         # exit gracefully
         try:
-            self.play()
+            self.play_game()
         except KeyboardInterrupt:
             exit(0)
 
-    def play(self):
+    def play_game(self):
         while not self.finished():
             winner, score = self.play_round()
             if winner == 0:
@@ -140,9 +201,19 @@ class Euchre:
         # play 5 tricks
         tricks1 = 0
         tricks2 = 0
+        leader = (self.dealer + 1) % 4
+
+        # skip partner if alone
+        if alone:
+            skip_player = (caller + 2) % 4
+            if leader == skip_player:
+                leader = (leader + 1) % 4
+        else:
+            skip_player = None
+
         for _ in range(5):
-            winner = self.play_trick(trump, alone)
-            if winner % 2 == 0:
+            leader = self.play_trick(leader, trump, skip_player)
+            if leader % 2 == 0:
                 tricks1 += 1
             else:
                 tricks2 += 1
@@ -168,10 +239,28 @@ class Euchre:
             # this is a euchre
             return 2
 
-    def play_trick(self, trump, alone):
-        # one play from each player, starting from the person after the dealer
-        # skip partner for alone
-        # TODO implement this
+    def play_trick(self, leader, trump, skip_player=None):
+        suit = None
+        plays = {}
+        for i in range(4):
+            # choose player
+            player = (leader + i) % 4
+
+            # if skipped player, skip
+            if skip_player is not None and player == skip_player:
+                continue
+
+            # choose card to play, following suit
+            card = self.players[player].choose_card("What to play? ", suit)
+
+            # set suit and card order if first player
+            if suit is None:
+                suit = card.suit
+                Suits.order(suit, trump)
+
+            # add to the trick
+            plays[player] = card
+
         return 0
 
     def bidding_round_one(self):
