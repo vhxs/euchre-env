@@ -1,9 +1,7 @@
 ## Euchre game environment
 Euchre is a popular trick-taking card game played a lot in the midwest. I play it with family all the time. Euchre has a small (but still big) state space as far as card games go (24 cards, 4 players, 5 tricks per round).
 
-How would a reinforcement learning agent do at learning this game? From experience, there is a general strategy to play the game (there is usually one correct play at any given time), but this consists of lots of "rules" depending on the situation. I think a rule-based agent would be well, but there would be lots of rules to enumerate. So it would be interesting to see how an RL agent might learn this game.
-
-Let's get the game written first, and maybe put a front end on it.
+Let's get the game written first, and maybe put a front end on it, then maybe do AI something or other with it?
 
 This looks relevant: https://web.stanford.edu/class/aa228/reports/2020/final165.pdf
 
