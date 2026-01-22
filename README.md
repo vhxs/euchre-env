@@ -8,3 +8,22 @@ This looks relevant: https://web.stanford.edu/class/aa228/reports/2020/final165.
 *The American Hoyle; or, Gentleman's hand-book of games* on Library of Congress, apparently considered the holy grail of Euchre strategy: [link](https://www.loc.gov/resource/dcmsiabooks.americanhoyleorg00dick_0/?sp=2&st=pdf&pdfPage=1). The guy named Hoyle predates the existence of Euchre though.
 
 Someone made a JavaScript library to render cards (though it looks like it may not be maintained anymore): https://github.com/richardschneider/cardsJS
+
+## Development with uv
+Use `uv` to manage the environment and run commands locally.
+
+```bash
+uv sync
+```
+
+To run scripts or modules inside the managed environment:
+
+```bash
+uv run python main.py
+```
+
+The `uv.lock` file is checked in and should be updated whenever dependencies change. Regenerate it with:
+
+```bash
+uv lock
+```
